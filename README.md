@@ -1,69 +1,67 @@
-# ScreenScorch
+# ScreenScorch 
 
-A powerful tool for intelligent screenshot management and retrieval.
+![Project Status](https://img.shields.io/badge/status-in%20development-orange)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
----
-
-## 🚀 Features
-
-*   **Semantic Search:** Find screenshots using natural language queries.
-*   **Efficient Indexing:** Quickly index your screenshot library for fast searching.
-*   **Customizable Configuration:** Tailor the indexing and searching behavior to your needs.
-*   **Pythonic Design:** Built with clean and maintainable Python code.
+A local-first, AI-powered desktop application for macOS that lets you find any screenshot in your collection using natural language. Your screenshots, your computer, your data.
 
 ---
 
-## 🛠️ Installation
+- **Find by Meaning:** Search for "that funny chat about dogs" or "the error message from the database" and find it instantly.
+- **Entirely Local:** Your screenshots and their index never leave your machine. No cloud, no subscriptions, no privacy concerns.
+- **Fast & Native:** A simple, clean interface that feels right at home on macOS.
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/bvrvl/screenscorch.git
-    cd screenscorch
-    ```
 
-2.  **Install the dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+### Current Status
 
----
+This project is in **active development**, transitioning from a powerful command-line tool to a full desktop application. The core AI-powered semantic search technology is complete and functional. The next phase is to build the graphical user interface (GUI).
 
-## 💡 Usage
+### Features
 
-Here's a basic example of how to use ScreenScorch to index and search your screenshots:
+- ✅ **OCR Text Extraction**: Scans all screenshots to read the text within them.
+- ✅ **AI-Powered Semantic Search**: The core engine that understands the *meaning* of your search query.
+- 🚧 **Graphical User Interface**: In-progress. A simple, intuitive interface for searching and viewing results.
+- ⏳ **Duplicate & Clutter Detection**: A planned feature to help you clean up your screenshot folder.
+- ⏳ **Visual Search (Content-based)**: A planned feature to search for images based on what they *look like*, not just the text in them.
 
-```python
-from screenscorch import ScreenScorch
+### Technology Stack
 
-# Initialize ScreenScorch
-sc = ScreenScorch()
+- **Backend**: Python 3
+- **AI/ML**: PyTorch, Sentence-Transformers
+- **OCR Engine**: Google's Tesseract
+- **GUI Framework**: PyQt6 (planned)
 
-# Index your screenshots (assuming screenshots are in a 'screenshots/' directory)
-sc.index_screenshots('screenshots/')
+### Running the Current Command-Line Version
 
-# Search for a screenshot using a descriptive query
-results = sc.search("a screenshot of my code editor with a dark theme")
+While the GUI is being built, you can use the powerful CLI version today.
 
-# Print the paths of the most relevant screenshots
-for result in results:
-    print(result['path'])
+**1. Prerequisites:**
+You must have [Homebrew](https://brew.sh/) installed. Then, install Tesseract:
+```bash
+brew install tesseract
 ```
 
-For more advanced usage and configuration options, please refer to the project's documentation.
+**2. Clone the Repository:**
+```bash
+git clone https://github.com/your-username/screenscorch.git
+cd screenscorch
+```
 
----
+**3. Set up the Environment:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+**4. Run the Tool:**
+- **Index your files:** `python3 screenscorch/indexer.py`
+- **Create embeddings:** `python3 screenscorch/embedder.py`
+- **Search your index:** `python3 screenscorch/searcher.py`
 
-## 🤝 Contributing
+### How to Contribute
 
-Contributions are welcome! If you'd like to contribute to ScreenScorch, please follow these guidelines:
+This is a personal project, but I'm open to collaboration! If you're interested in helping out, especially with UI/UX design or PyQt development, please open an issue to start a discussion.
 
-1.  Fork the repository.
-2.  Create a new branch for your feature or bug fix.
-3.  Make your changes and ensure they are well-tested.
-4.  Submit a pull request.
+### License
 
----
-
-## 📜 License
-
-ScreenScorch is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
