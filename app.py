@@ -28,11 +28,10 @@ def main(page: ft.Page):
             try:
                 send2trash(path)
                 status_bar.value = f"🗑️ Moved to Trash: {os.path.basename(path)}"
-                # Refresh the current view after deletion
                 if cleaner_view.visible:
-                    run_cleaner_scan()
+                    run_cleaner_scan() 
                 else:
-                    handle_search(rerun=True) # Re-run the last search
+                    handle_search(rerun=True)
             except Exception as ex:
                 status_bar.value = f"❌ Error moving to Trash: {ex}"
             page.update()
@@ -40,7 +39,7 @@ def main(page: ft.Page):
     # --- UI CONTROLS ---
     search_field = ft.TextField(hint_text="Search your screenshots...", expand=True, on_submit=lambda e: handle_search())
     search_button = ft.IconButton(icon="search", on_click=lambda e: handle_search())
-    results_list = ft.ListView(expand=True, spacing=10, item_extent=80)
+    results_list = ft.ListView(expand=True, spacing=5) # Reduced spacing for a tighter list
     search_view = ft.Column(controls=[ft.Row([search_field, search_button]), results_list], visible=True, expand=True)
     
     cleaner_results_view = ft.ListView(expand=True, spacing=15)
@@ -52,7 +51,6 @@ def main(page: ft.Page):
             page.update()
             return
         for path in files_to_delete:
-            # This is slightly inefficient as it re-scans for each file, but it's robust
             move_to_trash(e, path)
         status_bar.value = f"✅ Moved {len(files_to_delete)} files to Trash."
         page.update()
@@ -70,12 +68,43 @@ def main(page: ft.Page):
     ], visible=False, expand=True)
     status_bar = ft.Text("Welcome!", size=12)
 
+    # --- CUSTOM WIDGET BUILDER FOR SEARCH RESULTS ---
+    def create_search_result_row(result_data):
+        """Builds a custom, stable row for a search result."""
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Image(
+                        src=result_data.get('thumbnail_path'), 
+                        width=70, height=70, 
+                        fit=ft.ImageFit.CONTAIN, 
+                        border_radius=ft.border_radius.all(6)
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(os.path.basename(result_data['file_path']), size=14, weight=ft.FontWeight.BOLD),
+                            ft.Text(f"Match: {result_data['match_type']} ({result_data['score']})", size=12, color="grey_400"),
+                        ],
+                        expand=True,
+                        spacing=2
+                    ),
+                    ft.IconButton(icon="folder_open", on_click=lambda e, p=result_data['file_path']: open_file_in_finder(e, p), tooltip="Show in Finder"),
+                    ft.IconButton(icon="delete", on_click=lambda e, p=result_data['file_path']: move_to_trash(e, p), tooltip="Move to Trash"),
+                ],
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            on_click=lambda e, p=result_data['file_path']: subprocess.run(['open', p]),
+            padding=ft.padding.symmetric(vertical=5, horizontal=10),
+            border_radius=ft.border_radius.all(8),
+            ink=True # Adds a ripple effect on click
+        )
+
     # --- CORE LOGIC ---
     def handle_search(rerun=False):
-        # If not a re-run, get the query from the text field
         query = search_field.value if not rerun else getattr(search_field, 'last_query', '')
         if not query: return
-        search_field.last_query = query # Save the last query
+        search_field.last_query = query
         
         status_bar.value = f"Searching for '{query}'..."
         page.update()
@@ -89,19 +118,8 @@ def main(page: ft.Page):
             status_bar.value = f"🤷 No results found for '{query}'."
         else:
             for res in results:
-                trailing_actions = ft.Row([
-                    ft.IconButton(icon="folder_open", on_click=lambda e, p=res['file_path']: open_file_in_finder(e, p), tooltip="Show in Finder"),
-                    ft.IconButton(icon="delete", on_click=lambda e, p=res['file_path']: move_to_trash(e, p), tooltip="Move to Trash"),
-                ])
-                list_item = ft.ListTile(
-                    data=res['file_path'],
-                    leading=ft.Image(src=res.get('thumbnail_path'), width=60, height=60, fit=ft.ImageFit.CONTAIN, border_radius=ft.border_radius.all(6)),
-                    title=ft.Text(os.path.basename(res['file_path']), size=14),
-                    subtitle=ft.Text(f"Match: {res['match_type']} ({res['score']})", size=12),
-                    trailing=trailing_actions,
-                    on_click=lambda e, p=res['file_path']: subprocess.run(['open', p])
-                )
-                results_list.controls.append(list_item)
+                # USE THE NEW CUSTOM WIDGET BUILDER
+                results_list.controls.append(create_search_result_row(res))
             status_bar.value = f"✅ Found {len(results)} results."
         page.update()
     
@@ -138,8 +156,7 @@ def main(page: ft.Page):
                 cb = ft.Checkbox(value=is_checked, data=file_obj['file_path'])
                 cleaner_checkboxes.append(cb)
                 return ft.Row(controls=[
-                    cb,
-                    ft.Image(src=file_obj['thumbnail_path'], width=50, height=50, fit=ft.ImageFit.CONTAIN, border_radius=ft.border_radius.all(4)),
+                    cb, ft.Image(src=file_obj['thumbnail_path'], width=50, height=50, fit=ft.ImageFit.CONTAIN, border_radius=ft.border_radius.all(4)),
                     ft.Text(os.path.basename(file_obj['file_path']), expand=True, size=12),
                     ft.IconButton(icon="folder_open", on_click=lambda e, p=file_obj['file_path']: open_file_in_finder(e, p), tooltip="Show in Finder"),
                     ft.IconButton(icon="open_in_new", on_click=lambda e, p=file_obj['file_path']: subprocess.run(['open', p]), tooltip="Open File"),
@@ -160,7 +177,6 @@ def main(page: ft.Page):
             def update_status_callback(message):
                 status_bar.value = message
                 page.update()
-            
             duplicate_data = find_duplicates(update_status_callback)
             on_scan_complete(duplicate_data)
         
@@ -172,10 +188,9 @@ def main(page: ft.Page):
     navigation_row = ft.Row([search_nav_button, cleaner_nav_button], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
 
     page.appbar = ft.AppBar(
-        leading=ft.Icon("camera_alt"),
-        title=ft.Text("ScreenScorch"),
+        leading=ft.Icon("camera_alt"), title=ft.Text("ScreenScorch"),
         actions=[
-            ft.IconButton(icon="refresh", on_click=lambda e: run_task_in_thread(build_text_index, os.path.expanduser("/Users/saurabh/Desktop/temp")), tooltip="Re-run Indexer"),
+            ft.IconButton(icon="refresh", on_click=lambda e: run_task_in_thread(build_text_index, os.path.expanduser("~/Desktop")), tooltip="Re-run Indexer"),
             ft.IconButton(icon="model_training", on_click=lambda e: run_task_in_thread(build_semantic_index), tooltip="Re-run Embedder"),
         ]
     )
