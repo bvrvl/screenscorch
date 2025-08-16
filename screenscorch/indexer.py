@@ -5,7 +5,7 @@ from PIL import Image
 import pytesseract
 
 # Path to the folder
-SCREENSHOTS_FOLDER = "/Users/saurabh/Desktop/temp2025/tempMay282025"
+SCREENSHOTS_FOLDER = "/Users/saurabh/Desktop/temp"
 
 # This is the name of the file where the index will be stored.
 INDEX_FILE = "screenshot_index.json"
