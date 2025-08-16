@@ -51,7 +51,6 @@ def main(page: ft.Page):
 
     # --- CORE LOGIC ---
     def handle_search():
-        # ... (This function is unchanged)
         query = search_field.value
         if not query: return
         status_bar.value = f"Searching for '{query}'..."
@@ -79,18 +78,14 @@ def main(page: ft.Page):
             status_bar.value = f"✅ Found {len(results)} results."
         page.update()
     
-    # THIS IS THE CORRECTED THREADING LOGIC
     def run_task_in_thread(target_func, *args):
         def update_status_callback(message):
-            """This function will be called from the background thread."""
             status_bar.value = message
-            page.update() # This call is thread-safe in Flet
-
+            page.update()
         thread = threading.Thread(target=target_func, args=(*args, update_status_callback))
         thread.start()
 
     def handle_view_change(e):
-        # ... (This function is unchanged)
         selected_index = e.control.data
         search_view.visible = (selected_index == 0)
         search_nav_button.style.bgcolor = "white10" if selected_index == 0 else None
@@ -101,11 +96,9 @@ def main(page: ft.Page):
         page.update()
 
     def run_cleaner_scan():
-        # ... (This function is also simplified)
         status_bar.value = "Starting duplicate scan..."
         cleaner_results_view.controls.clear()
         page.update()
-
         def scanner_thread_target():
             def update_status_callback(message):
                 status_bar.value = message
@@ -126,20 +119,20 @@ def main(page: ft.Page):
                         group_col = ft.Column([ft.Checkbox(label=path, value=(i > 0)) for i, path in enumerate(group)])
                         cleaner_results_view.controls.append(ft.Card(content=ft.Container(group_col, padding=10)))
                 page.update()
-
             dupes = find_duplicates(update_status_callback)
             on_scan_complete(dupes)
-        
         threading.Thread(target=scanner_thread_target).start()
     
-    # --- FINAL PAGE LAYOUT (UNCHANGED) ---
+    # --- FINAL PAGE LAYOUT ---
     search_nav_button = ft.TextButton(text="Search", icon="search", data=0, on_click=handle_view_change, style=ft.ButtonStyle(bgcolor="white10"))
-    cleaner_nav_button = ft.TextButton(text="Cleaner", icon="cleaning_services", data=1, on_click=handle_view_change)
+    
+    cleaner_nav_button = ft.TextButton(text="Cleaner", icon="cleaning_services", data=1, on_click=handle_view_change, style=ft.ButtonStyle())
+    
     navigation_row = ft.Row([search_nav_button, cleaner_nav_button], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
 
     page.appbar = ft.AppBar(leading=ft.Icon("camera_alt"), title=ft.Text("ScreenScorch"), actions=[
         ft.PopupMenuButton(items=[
-            ft.PopupMenuItem(text="Re-run Indexer", on_click=lambda e: run_task_in_thread(build_text_index, os.path.expanduser("/Users/saurabh/Desktop/temp"))),
+            ft.PopupMenuItem(text="Re-run Indexer", on_click=lambda e: run_task_in_thread(build_text_index, os.path.expanduser("~/Desktop"))),
             ft.PopupMenuItem(text="Re-run Embedder", on_click=lambda e: run_task_in_thread(build_semantic_index)),
         ])
     ])

@@ -28,32 +28,41 @@ def build_semantic_index(status_callback=None):
         if status_callback: status_callback("❌ Text index not found. Please index first.")
         return False
 
-    items_to_process = [item for item in data if item.get('text')]
-    all_texts = [item['text'] for item in items_to_process]
+    # This will now contain the thumbnail path
+    items_with_text = [item for item in data if item.get('text')]
+    all_texts = [item['text'] for item in items_with_text]
     
     if status_callback: status_callback(f"Generating embeddings for {len(all_texts)} texts...")
     embeddings = model_cache.encode(all_texts, show_progress_bar=False)
     
-    for item, embedding in zip(items_to_process, embeddings):
-        item['embedding'] = embedding.tolist()
+    semantic_data = []
+    for item, embedding in zip(items_with_text, embeddings):
+        # Create a new dictionary with all old data plus the new embedding
+        new_item = {
+            "file_path": item["file_path"],
+            "thumbnail_path": item.get("thumbnail_path"),
+            "text": item["text"],
+            "embedding": embedding.tolist()
+        }
+        semantic_data.append(new_item)
 
     with open(SEMANTIC_INDEX_FILE, 'w', encoding='utf-8') as f:
-        json.dump(items_to_process, f, indent=4)
+        json.dump(semantic_data, f, indent=4)
     
     if status_callback: status_callback("✅ Semantic index created successfully!")
     return True
-
 
 def perform_semantic_search(query, top_k=5):
     """Performs a semantic search and returns a list of result dictionaries."""
     global model_cache, corpus_embeddings_cache, corpus_data_cache
     
-    # Load model and index into memory on the first search
     if model_cache is None or corpus_embeddings_cache is None:
         try:
             device = "mps" if torch.backends.mps.is_available() else "cpu"
             model_cache = SentenceTransformer(MODEL_NAME, device=device)
             with open(SEMANTIC_INDEX_FILE, 'r', encoding='utf-8') as f:
+                # IMPORTANT: We load the SEMANTIC index, which needs the thumbnail path.
+                # Let's assume the embedder will pass it through.
                 corpus_data_cache = json.load(f)
             
             embeddings_list = [item['embedding'] for item in corpus_data_cache]
@@ -73,6 +82,7 @@ def perform_semantic_search(query, top_k=5):
         results.append({
             "score": f"{score:.4f}",
             "path": match['file_path'],
-            "text": ' '.join(match['text'].split())[:100] + '...'
+            "text": ' '.join(match['text'].split())[:100] + '...',
+            "thumbnail_path": match.get('thumbnail_path')
         })
     return results
