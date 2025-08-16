@@ -11,7 +11,7 @@ clip_model_cache = None
 def build_master_index(screenshots_folder_path, status_callback=None):
     """
     Scans screenshots and generates a master index with OCR text, 
-    a CLIP image embedding, and all face embeddings.
+    a CLIP image embedding, all face embeddings, AND original dimensions.
     """
     global clip_model_cache
     
@@ -20,14 +20,12 @@ def build_master_index(screenshots_folder_path, status_callback=None):
     os.makedirs(THUMBNAIL_DIR, exist_ok=True)
     MASTER_INDEX_FILE = os.path.join(APP_DIR, "master_index.json")
 
-    if status_callback:
-        status_callback("Loading AI models (this may take a moment)...")
+    if status_callback: status_callback("Loading AI models...")
     
     if clip_model_cache is None:
         clip_model_cache = SentenceTransformer(CLIP_MODEL_NAME)
 
-    if status_callback:
-        status_callback("Starting master indexing process...")
+    if status_callback: status_callback("Starting master indexing process...")
 
     master_data = []
     image_extensions = {'.png', '.jpg', '.jpeg'}
@@ -42,40 +40,36 @@ def build_master_index(screenshots_folder_path, status_callback=None):
                 status_callback(f"Processing [{i+1}/{total_images}]: {filename}")
             
             try:
-                # --- 1. Load Image and Create Thumbnail ---
                 pil_image = Image.open(file_path)
-                
+                original_width, original_height = pil_image.size
+
+                # --- Create Thumbnail ---
                 thumbnail_filename = f"{os.path.splitext(filename)[0]}.jpeg"
                 thumbnail_path = os.path.join(THUMBNAIL_DIR, thumbnail_filename)
-                
                 img_copy = pil_image.copy()
                 img_copy.thumbnail((256, 256))
                 if img_copy.mode in ('RGBA', 'P'):
                     img_copy = img_copy.convert('RGB')
                 img_copy.save(thumbnail_path, "jpeg")
 
-                # --- 2. Extract OCR Text ---
+                # --- Extract Text, Embeddings, Faces (as before) ---
                 extracted_text = pytesseract.image_to_string(pil_image, lang='eng')
-
-                # --- 3. Generate CLIP Image Embedding ---
                 clip_embedding = clip_model_cache.encode(pil_image).tolist()
-                
-                # --- 4. Detect and Generate Face Embeddings ---
                 np_image = face_recognition.load_image_file(file_path)
-
                 face_locations = face_recognition.face_locations(np_image)
                 face_encodings = face_recognition.face_encodings(np_image, face_locations)
-                
                 face_encodings_list = [enc.tolist() for enc in face_encodings]
 
-                # --- 5. Store all data ---
+                # --- Store all data, including new dimensions ---
                 screenshot_info = {
                     "file_path": file_path,
                     "thumbnail_path": thumbnail_path,
                     "text": extracted_text.strip(),
                     "clip_embedding": clip_embedding,
                     "face_embeddings": face_encodings_list,
-                    "face_locations": face_locations
+                    "face_locations": face_locations,
+                    "width": original_width,  
+                    "height": original_height 
                 }
                 master_data.append(screenshot_info)
 
@@ -90,7 +84,6 @@ def build_master_index(screenshots_folder_path, status_callback=None):
         return True
 
     except Exception as e:
-        if status_callback:
-            status_callback(f"❌ Critical error during indexing: {e}")
+        if status_callback: status_callback(f"❌ Critical error during indexing: {e}")
         print(e)
         return False

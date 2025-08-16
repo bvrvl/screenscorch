@@ -6,24 +6,25 @@ import imagehash
 from collections import defaultdict
 
 APP_DIR = os.path.join(os.path.expanduser("~"), ".screenscorch")
-TEXT_INDEX_FILE = os.path.join(APP_DIR, "screenshot_index.json")
+MASTER_INDEX_FILE = os.path.join(APP_DIR, "master_index.json")
 
 def find_duplicates(status_callback=None):
     """
-    Finds exact and near-duplicate images, returning full object info including thumbnail paths.
+    Finds exact and near-duplicate images from the MASTER index.
     """
     try:
-        with open(TEXT_INDEX_FILE, 'r', encoding='utf-8') as f:
+        with open(MASTER_INDEX_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        # Create a fast lookup map from file_path to the full object
         path_to_object_map = {item['file_path']: item for item in data}
         
     except FileNotFoundError:
-        if status_callback: status_callback("❌ Index file not found. Please index first.")
+        if status_callback: status_callback("❌ Master index not found. Please run the indexer first.")
+        return None
+    except json.JSONDecodeError:
+        if status_callback: status_callback("❌ Error reading master index. It might be corrupted.")
         return None
 
-    # --- Find Exact Duplicates ---
     if status_callback: status_callback("Scanning for exact duplicates...")
     exact_hashes = defaultdict(list)
     for path in path_to_object_map.keys():
@@ -40,14 +41,16 @@ def find_duplicates(status_callback=None):
         for group in exact_hashes.values() if len(group) > 1
     ]
 
-    # --- Find Near Duplicates ---
     if status_callback: status_callback("Scanning for near-duplicates (this may take time)...")
     near_hashes = {}
     for path in path_to_object_map.keys():
         if not os.path.exists(path): continue
-        with Image.open(path) as img:
-            p_hash = imagehash.phash(img)
-            near_hashes[path] = p_hash
+        try:
+            with Image.open(path) as img:
+                p_hash = imagehash.phash(img)
+                near_hashes[path] = p_hash
+        except Exception:
+            continue # Skip corrupted images
 
     near_dupes_groups = []
     matched_files = set()
@@ -56,7 +59,7 @@ def find_duplicates(status_callback=None):
         current_group_paths = [path1]
         for path2, hash2 in near_hashes.items():
             if path1 == path2 or path2 in matched_files: continue
-            if hash1 - hash2 <= 10: # Threshold for similarity
+            if hash1 - hash2 <= 10: # Similarity threshold
                 current_group_paths.append(path2)
         
         if len(current_group_paths) > 1:
