@@ -45,7 +45,8 @@ def index_screenshots(folder_path):
             # Open the image file using the Pillow library
             with Image.open(file_path) as img:
                 # Use Tesseract to perform OCR and extract text
-                extracted_text = pytesseract.image_to_string(img)
+                extracted_text = pytesseract.image_to_string(img, lang='eng+hin+nep+spa')
+
                 
                 # Store the information for this screenshot
                 screenshot_info = {
