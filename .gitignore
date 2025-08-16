@@ -49,9 +49,13 @@ ENV/
 env.bak/
 venv.bak/
 # IDEs
+.DS_Store
 .idea/
 .vscode/
 # Development Scrap
 en.txt
 scrap.txt
 combined.txt
+# Project Specific
+screenshot_index.json
+semantic_index.json
