@@ -4,6 +4,7 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 import flet as ft
 import subprocess
 import threading
+from send2trash import send2trash
 from core.indexer import build_text_index
 from core.search_logic import build_semantic_index, perform_semantic_search
 from core.cleaner_logic import find_duplicates
@@ -24,12 +25,13 @@ def main(page: ft.Page):
         path = item_to_delete.data
         if os.path.exists(path):
             try:
-                os.remove(path)
-                status_bar.value = f"🗑️ Deleted {path.split('/')[-1]}"
+                # USE THE SAFER "SEND TO TRASH" FUNCTION
+                send2trash(path)
+                status_bar.value = f"🗑️ Moved to Trash: {path.split('/')[-1]}"
                 if search_view.visible:
                     results_list.controls.remove(item_to_delete)
             except Exception as e:
-                status_bar.value = f"❌ Error deleting file: {e}"
+                status_bar.value = f"❌ Error moving to Trash: {e}"
             page.update()
 
     # --- UI CONTROLS ---
@@ -72,7 +74,7 @@ def main(page: ft.Page):
                 )
                 list_item.trailing = ft.PopupMenuButton(items=[
                     ft.PopupMenuItem(text="Show in Finder", icon="folder_open", on_click=lambda e, p=res['path']: open_file_in_finder(e, p)),
-                    ft.PopupMenuItem(text="Delete", icon="delete", on_click=lambda e, item=list_item: delete_file_from_view(item)),
+                    ft.PopupMenuItem(text="Move to Trash", icon="delete", on_click=lambda e, item=list_item: delete_file_from_view(item)),
                 ])
                 results_list.controls.append(list_item)
             status_bar.value = f"✅ Found {len(results)} results."
@@ -113,8 +115,14 @@ def main(page: ft.Page):
                     for group in dupes["exact"]:
                         group_col = ft.Column([ft.Checkbox(label=path, value=(i > 0)) for i, path in enumerate(group)])
                         cleaner_results_view.controls.append(ft.Card(content=ft.Container(group_col, padding=10)))
+                
                 if dupes["near"]:
-                    cleaner_results_view.controls.append(ft.Text("Near Duplicates", weight=ft.FontWeight.BOLD, margin=ft.margin.only(top=20)))
+                    # We wrap the Text widget in a Container to give it a margin
+                    near_dupes_title = ft.Container(
+                        content=ft.Text("Near Duplicates (Visually Similar)", weight=ft.FontWeight.BOLD),
+                        margin=ft.margin.only(top=20)
+                    )
+                    cleaner_results_view.controls.append(near_dupes_title)
                     for group in dupes["near"]:
                         group_col = ft.Column([ft.Checkbox(label=path, value=(i > 0)) for i, path in enumerate(group)])
                         cleaner_results_view.controls.append(ft.Card(content=ft.Container(group_col, padding=10)))
@@ -125,9 +133,7 @@ def main(page: ft.Page):
     
     # --- FINAL PAGE LAYOUT ---
     search_nav_button = ft.TextButton(text="Search", icon="search", data=0, on_click=handle_view_change, style=ft.ButtonStyle(bgcolor="white10"))
-    
     cleaner_nav_button = ft.TextButton(text="Cleaner", icon="cleaning_services", data=1, on_click=handle_view_change, style=ft.ButtonStyle())
-    
     navigation_row = ft.Row([search_nav_button, cleaner_nav_button], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
 
     page.appbar = ft.AppBar(leading=ft.Icon("camera_alt"), title=ft.Text("ScreenScorch"), actions=[
