@@ -10,7 +10,6 @@ SEMANTIC_INDEX_FILE = os.path.join(APP_DIR, "semantic_index.json")
 MODEL_NAME = 'all-MiniLM-L6-v2'
 
 # --- GLOBAL MODEL CACHE ---
-# We only want to load the model into memory once.
 model_cache = None
 corpus_embeddings_cache = None
 corpus_data_cache = None
@@ -18,7 +17,7 @@ corpus_data_cache = None
 def build_semantic_index(status_callback=None):
     """Generates and saves semantic embeddings for the text index."""
     global model_cache
-    if not model_cache:
+    if model_cache is None:
         if status_callback: status_callback("Loading AI model (first time may be slow)...")
         model_cache = SentenceTransformer(MODEL_NAME)
     
@@ -33,7 +32,7 @@ def build_semantic_index(status_callback=None):
     all_texts = [item['text'] for item in items_to_process]
     
     if status_callback: status_callback(f"Generating embeddings for {len(all_texts)} texts...")
-    embeddings = model_cache.encode(all_texts, show_progress_bar=False) # Progress bar handled by GUI now
+    embeddings = model_cache.encode(all_texts, show_progress_bar=False)
     
     for item, embedding in zip(items_to_process, embeddings):
         item['embedding'] = embedding.tolist()
@@ -50,7 +49,7 @@ def perform_semantic_search(query, top_k=5):
     global model_cache, corpus_embeddings_cache, corpus_data_cache
     
     # Load model and index into memory on the first search
-    if not model_cache or not corpus_embeddings_cache:
+    if model_cache is None or corpus_embeddings_cache is None:
         try:
             device = "mps" if torch.backends.mps.is_available() else "cpu"
             model_cache = SentenceTransformer(MODEL_NAME, device=device)

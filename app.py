@@ -1,9 +1,10 @@
 import flet as ft
 import subprocess
 import threading
-import os
 from core.indexer import build_text_index
 from core.search_logic import build_semantic_index, perform_semantic_search
+import os
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 def main(page: ft.Page):
     # --- APP CONFIGURATION ---
@@ -20,12 +21,11 @@ def main(page: ft.Page):
         on_submit=lambda e: handle_search(e.control.value)
     )
     search_button = ft.IconButton(
-        icon=ft.icons.SEARCH,
+        icon="search",
         on_click=lambda e: handle_search(search_field.value)
     )
     results_list = ft.ListView(expand=True, spacing=10)
-    status_bar = ft.Text("Welcome to ScreenScorch! Enter a query to begin.", size=12, color=ft.colors.GREY_600)
-
+    status_bar = ft.Text("Welcome to ScreenScorch! Enter a query to begin.", size=12, color="grey_600")
     # --- CORE FUNCTIONS ---
     def handle_search(query):
         if not query:
@@ -45,7 +45,7 @@ def main(page: ft.Page):
             for res in results:
                 results_list.controls.append(
                     ft.ListTile(
-                        leading=ft.Icon(ft.icons.IMAGE),
+                        leading=ft.Icon("image"),
                         title=ft.Text(res['path'].split('/')[-1]),
                         subtitle=ft.Text(f"Similarity: {res['score']} | Text: {res['text']}"),
                         on_click=lambda e, path=res['path']: subprocess.run(['open', path])
@@ -56,9 +56,8 @@ def main(page: ft.Page):
         page.update()
 
     def run_indexing_in_thread(e):
-        # We run this in a thread to avoid freezing the UI
-        # A real app would need a folder picker, but we'll hardcode for now.
-        screenshots_folder = os.path.expanduser("~/Desktop")
+        # Remove Hardcoded and add Folder picker later
+        screenshots_folder = os.path.expanduser("/Users/saurabh/Desktop/temp") 
         
         def update_status(message):
             status_bar.value = message
@@ -67,7 +66,6 @@ def main(page: ft.Page):
         threading.Thread(target=build_text_index, args=(screenshots_folder, update_status)).start()
 
     def run_embedding_in_thread(e):
-        # Also run this in a thread
         def update_status(message):
             status_bar.value = message
             page.update()
@@ -76,7 +74,7 @@ def main(page: ft.Page):
 
     # --- LAYOUT THE PAGE ---
     page.appbar = ft.AppBar(
-        leading=ft.Icon(ft.icons.CAMERA_ALT_OUTLINED),
+        leading=ft.Icon("camera_alt_outlined"),
         title=ft.Text("ScreenScorch"),
         actions=[
             ft.PopupMenuButton(items=[
