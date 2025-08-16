@@ -6,7 +6,6 @@ import face_recognition
 from sentence_transformers import SentenceTransformer
 
 CLIP_MODEL_NAME = 'clip-ViT-B-32'
-# Cache the model so we don't reload it constantly
 clip_model_cache = None
 
 def build_master_index(screenshots_folder_path, status_callback=None):
@@ -24,7 +23,6 @@ def build_master_index(screenshots_folder_path, status_callback=None):
     if status_callback:
         status_callback("Loading AI models (this may take a moment)...")
     
-    # Load the CLIP model once
     if clip_model_cache is None:
         clip_model_cache = SentenceTransformer(CLIP_MODEL_NAME)
 
@@ -59,18 +57,15 @@ def build_master_index(screenshots_folder_path, status_callback=None):
                 # --- 2. Extract OCR Text ---
                 extracted_text = pytesseract.image_to_string(pil_image, lang='eng')
 
-                # --- 3. Generate CLIP Image Embedding (for general visual search) ---
+                # --- 3. Generate CLIP Image Embedding ---
                 clip_embedding = clip_model_cache.encode(pil_image).tolist()
                 
                 # --- 4. Detect and Generate Face Embeddings ---
-                # face_recognition library works with numpy arrays, not PIL Images
-                rgb_image = pil_image.convert('RGB')
-                np_image = face_recognition.api.load_image_file(rgb_image)
+                np_image = face_recognition.load_image_file(file_path)
 
                 face_locations = face_recognition.face_locations(np_image)
                 face_encodings = face_recognition.face_encodings(np_image, face_locations)
                 
-                # Convert numpy arrays to lists so they can be saved in JSON
                 face_encodings_list = [enc.tolist() for enc in face_encodings]
 
                 # --- 5. Store all data ---
@@ -80,15 +75,15 @@ def build_master_index(screenshots_folder_path, status_callback=None):
                     "text": extracted_text.strip(),
                     "clip_embedding": clip_embedding,
                     "face_embeddings": face_encodings_list,
-                    "face_locations": face_locations # Store locations for UI later
+                    "face_locations": face_locations
                 }
                 master_data.append(screenshot_info)
 
             except Exception as e:
-                print(f"\nError processing {filename}: {e}") # Print errors to console
+                print(f"\nError processing {filename}: {e}")
 
         with open(MASTER_INDEX_FILE, 'w', encoding='utf-8') as f:
-            json.dump(master_data, f) # Save without indent for a smaller file
+            json.dump(master_data, f)
         
         if status_callback:
             status_callback(f"✅ Master index complete! Processed {total_images} images.")
