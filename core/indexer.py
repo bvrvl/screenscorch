@@ -47,10 +47,12 @@ def build_master_index(screenshots_folder_path, status_callback=None):
                 thumbnail_filename = f"{os.path.splitext(filename)[0]}.jpeg"
                 thumbnail_path = os.path.join(THUMBNAIL_DIR, thumbnail_filename)
                 img_copy = pil_image.copy()
-                img_copy.thumbnail((256, 256))
+                # Increase max dimension from 256 to 400 for better clarity
+                img_copy.thumbnail((400, 400), Image.Resampling.LANCZOS)
                 if img_copy.mode in ('RGBA', 'P'):
                     img_copy = img_copy.convert('RGB')
-                img_copy.save(thumbnail_path, "jpeg")
+                # Increase JPEG quality from default (75) to 92 for a big quality boost
+                img_copy.save(thumbnail_path, "jpeg", quality=92)
 
                 # --- Extract Text, Embeddings, Faces (as before) ---
                 extracted_text = pytesseract.image_to_string(pil_image, lang='eng')
